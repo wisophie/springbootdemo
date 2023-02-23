@@ -1,7 +1,9 @@
 package com.example.springbootdemo.entity;
 
 
+import com.baomidou.mybatisplus.annotation.TableName;
 
+@TableName("users")   //修改表名
 public class User {
     private int id;
     private String username;
