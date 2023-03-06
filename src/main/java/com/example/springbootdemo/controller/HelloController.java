@@ -20,10 +20,21 @@ public class HelloController {
 
         List<User> List = userMapper.selectList(null);
         System.out.println(List);
+
         return List;
     }
     @PostMapping("/user")
     public String save(User user){
+        int i = userMapper.insert(user);
+        if(i>0){
+            return "插入成功";
+        }else{
+            return "插入失败";
+        }
+    }
+
+    @PostMapping("/login")
+    public String login(User user){
         int i = userMapper.insert(user);
         if(i>0){
             return "插入成功";
