@@ -1,0 +1,69 @@
+delimiter //
+CREATE PROCEDURE aqltoaql2(in lot_size1 INT,in aql1 DOUBLE,OUT acr2 INT,OUT sample_sizer2 int)
+BEGIN 
+DECLARE ssclr CHAR(2);
+DECLARE acr INT;
+DECLARE sample_sizer int;
+SELECT q.sscl INTO ssclr FROM qm_aql q WHERE q.lot_size<=lot_size1 order by q.lot_size desc limit 1;
+SELECT q2.ac,q2.sample_size INTO acr,sample_sizer FROM qm_aql2 q2 WHERE q2.sscl=ssclr AND q2.aql=aql1 ;
+set acr2 =acr;
+set sample_sizer2=sample_sizer;
+END //
+
+delimiter //
+CREATE PROCEDURE insertintoqm_tr(in qmpt VARCHAR(50),in qmdoc VARCHAR(50),in qmln int,in sample_size int,in qmseq int,in qmac int)
+BEGIN 
+declare refseq INT DEFAULT 1;
+declare seq INT DEFAULT 1;
+WHILE refseq<=sample_size DO
+WHILE seq<=qmseq DO
+INSERT INTO qm_tr(pt,doc,ln,ref1_seq,n_seq,ac) values(qmpt,qmdoc,qmln,refseq,seq,qmac);
+set seq=seq+1;
+END WHILE;
+set refseq=refseq+1;
+set seq=1;
+END WHILE;
+END 
+//
+
+delimiter //
+create procedure test(IN ptin VARCHAR(50),IN lot_sizein int,IN docin VARCHAR(50))
+begin
+declare t_pt VARCHAR(50);
+declare t_ln INT;
+declare t_qty_op INT;
+declare t_qty double;
+declare t_n_cnt INT;
+declare ac INT;
+declare sample_size INT;
+declare refseq INT DEFAULT 1;
+declare seq INT DEFAULT 1;
+declare done int default false;
+declare t_cursor cursor for select * from qm_pt q WHERE q.pt=ptin;
+declare continue handler for not found set done = true;
+
+open t_cursor;
+fetch t_cursor into t_pt, t_ln,t_qty_op,t_qty,t_n_cnt;
+repeat 
+CASE 
+WHEN t_qty_op=0 
+THEN 
+CALL aqltoaql2(lot_sizein,t_qty,ac,sample_size);
+CALL insertintoqm_tr(t_pt,docin,t_ln,sample_size,t_n_cnt,ac);
+
+
+WHEN t_qty_op=1 
+THEN 
+CALL insertintoqm_tr(t_pt,docin,t_ln,t_qty,t_n_cnt,0);
+
+ELSE 
+set t_qty=t_qty*lot_sizein;
+CALL insertintoqm_tr(t_pt,docin,t_ln,t_qty,t_n_cnt,0);
+
+END CASE;
+fetch t_cursor into t_pt, t_ln,t_qty_op,t_qty,t_n_cnt;
+until done end repeat;
+close t_cursor;
+end
+//
+CALL test('16000002',8,'PPO2210090001');
